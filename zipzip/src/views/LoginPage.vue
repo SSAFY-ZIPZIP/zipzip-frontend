@@ -30,14 +30,14 @@
 </template>
 
 <script>
+import { authApi } from "@/apis/auth";
+
 export default {
   name: "LoginPage",
   methods: {
     loginWithKakao() {
-      const clientId = "c308b93ab31b7136bbee287c1fe095ee";
-      const redirectUri = "http://localhost:5173/oauth";
-      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
-      window.location.href = kakaoAuthUrl;
+      const kakaoAuthUrl = authApi.getKakaoLoginUrl();
+      window.location.href = kakaoAuthUrl; // Kakao 인증 페이지로 리디렉션
     },
   },
 };

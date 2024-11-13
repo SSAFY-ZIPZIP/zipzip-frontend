@@ -1,19 +1,11 @@
 <script>
 import { onMounted } from "vue";
-import axios from "axios";
 import { useRouter } from "vue-router";
+import { authApi } from "@/apis/auth";
 
 export default {
   setup() {
     const router = useRouter();
-    const clientId = import.meta.env.VITE_KAKAO_CLIENT_ID;
-    const redirectUri = import.meta.env.VITE_KAKAO_REDIRECT_URI;
-    const baseUrl = import.meta.env.VITE_SERVER_BASE_URL;
-
-    const loginWithKakao = () => {
-      const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
-      window.location.href = kakaoAuthUrl; // 카카오 로그인 페이지로 리디렉션
-    };
 
     onMounted(async () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -21,13 +13,13 @@ export default {
 
       if (code) {
         try {
-          // 인가 코드를 백엔드 서버로 전송
-          const response = await axios.post(`${baseUrl}/v1/oauth/login`, {
-            code,
-          });
-          // 로그인 성공 시 토큰 등을 로컬 저장소에 저장
+          console.log("code", code);
+          // 인가 코드를 auth.loginWithKakao 메서드에 전달하여 로그인 처리
+          const response = await authApi.loginWithKakao(code);
+          // 로그인 성공 시 액세스 토큰과 리프레시 토큰을 로컬 스토리지에 저장
           localStorage.setItem("accessToken", response.data.accessToken);
           localStorage.setItem("refreshToken", response.data.refreshToken);
+          localStorage.setItem("memberId", response.data.memberId);
           router.push("/"); // 메인 페이지로 이동
         } catch (error) {
           console.error("로그인 실패:", error);
@@ -37,9 +29,7 @@ export default {
       }
     });
 
-    return {
-      loginWithKakao,
-    };
+    return {};
   },
 };
 </script>
