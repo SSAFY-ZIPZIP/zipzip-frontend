@@ -69,37 +69,25 @@
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
-import { authApi } from "@/apis/auth";
 import { memberApi } from "@/apis/member";
+import { authApi } from "@/apis/auth";
 
 export default {
   name: "Navbar",
-  directives: {
-    "click-outside": {
-      mounted(el, binding) {
-        el.clickOutsideEvent = function (event) {
-          if (!(el === event.target || el.contains(event.target))) {
-            binding.value(event);
-          }
-        };
-        document.addEventListener("click", el.clickOutsideEvent);
-      },
-      unmounted(el) {
-        document.removeEventListener("click", el.clickOutsideEvent);
-      },
-    },
+  props: {
+    selectedMenu: Number,
   },
-  setup() {
+  emits: ["menu-select", "auth-status-update"], // 부모(MainPage)로 이벤트 전달
+  setup(props, { emit }) {
     const router = useRouter();
     const isPopoverVisible = ref(false);
     const isAuthenticated = ref(false);
     const username = ref("");
     const email = ref("");
     const profileImageUrl = ref("");
-    const menuItems = ref(["매물.zip", "청약.zip", "우리.zip"]);
-    const selectedMenu = ref(0);
+    const menuItems = ["매물.zip", "청약.zip", "우리.zip"];
     const isLoading = ref(true);
 
     const handleImageError = (e) => {
@@ -109,6 +97,8 @@ export default {
     };
 
     const checkAuthStatus = async () => {
+      isLoading.value = true;
+
       const accessToken = localStorage.getItem("accessToken");
       const refreshToken = localStorage.getItem("refreshToken");
 
@@ -117,17 +107,18 @@ export default {
 
         try {
           const response = await memberApi.getUserInfo();
-          profileImageUrl.value = response.data.profileImgUrl;
-          username.value = response.data.nickname;
-          email.value = response.data.email;
+          profileImageUrl.value = response.data.profileImgUrl || "";
+          username.value = response.data.nickname || "알 수 없는 사용자";
+          email.value = response.data.email || "이메일 없음";
         } catch (error) {
-          console.error("사용자 정보 가져오기 오류:", error);
+          console.error("사용자 정보 가져오기 실패:", error);
           isAuthenticated.value = false;
         }
       } else {
         isAuthenticated.value = false;
       }
 
+      emit("auth-status-update", isAuthenticated.value); // 부모로 인증 상태 전달
       isLoading.value = false;
     };
 
@@ -135,18 +126,13 @@ export default {
       try {
         const refreshToken = localStorage.getItem("refreshToken");
         await authApi.logout(refreshToken);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("memberId");
+        localStorage.clear(); // 모든 로컬 저장소 제거
         isAuthenticated.value = false;
+        emit("auth-status-update", isAuthenticated.value); // 부모로 상태 전달
         closePopover();
         router.push("/");
       } catch (error) {
         console.error("로그아웃 중 에러 발생:", error);
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("memberId");
-        isAuthenticated.value = false;
       }
     };
 
@@ -164,11 +150,17 @@ export default {
     };
 
     const goToMain = () => {
-      router.push("/");
+      if (router.currentRoute.value.path === "/") {
+        // 메인 페이지에 있을 경우 새로고침
+        window.location.reload();
+      } else {
+        // 메인 페이지가 아닐 경우 라우팅
+        router.push("/");
+      }
     };
 
     const selectMenu = (index) => {
-      selectedMenu.value = index;
+      emit("menu-select", index);
     };
 
     onMounted(() => {
@@ -180,17 +172,16 @@ export default {
       isAuthenticated,
       username,
       email,
-      menuItems,
       profileImageUrl,
-      selectedMenu,
+      menuItems,
+      isLoading,
+      handleImageError,
+      handleLogout,
       togglePopover,
       closePopover,
       goToLogin,
       goToMain,
       selectMenu,
-      handleLogout,
-      isLoading,
-      handleImageError,
     };
   },
 };
