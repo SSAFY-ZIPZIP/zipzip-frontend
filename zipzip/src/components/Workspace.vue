@@ -50,11 +50,17 @@
           placeholder="워크스페이스명 입력"
         />
         <h4>함께하는 사람</h4>
+        <!-- 멤버 리스트 -->
         <div class="members-list">
           <template v-if="editWorkspaceMembers.length === 0">
-            <p class="no-members-message">
-              멤버가 한명도 없네요! 초대를 해보세요.
-            </p>
+            <div class="no-members-container">
+              <p class="no-members-message">
+                멤버가 한명도 없네요! 초대를 해보세요.
+              </p>
+              <button class="invite-button" @click="openInviteModal">
+                초대하기
+              </button>
+            </div>
           </template>
           <template v-else>
             <div
@@ -93,6 +99,24 @@
         </div>
       </div>
     </div>
+
+    <!-- 초대 모달 -->
+    <div v-if="isInviteModalOpen" class="modal-backdrop">
+      <div class="modal">
+        <h3 class="modal-title">우리.zip에 초대하기</h3>
+        <p class="modal-description">이메일로 친구를 초대 해보세요!</p>
+        <input
+          type="email"
+          v-model="inviteEmail"
+          class="modal-input"
+          placeholder="example@naver.com"
+        />
+        <div class="modal-actions">
+          <button class="cancel-button" @click="closeInviteModal">취소</button>
+          <button class="save-button" @click="inviteMember">초대</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -110,6 +134,8 @@ export default {
       editWorkspaceId: null,
       editWorkspaceMembers: [], // 수정 모달에 표시될 멤버 데이터
       visibleMenuIndex: null, // 현재 열려 있는 드롭다운 메뉴의 인덱스
+      isInviteModalOpen: false, // 초대 모달 상태
+      inviteEmail: "", // 초대할 이메일
     };
   },
   methods: {
@@ -214,6 +240,32 @@ export default {
       } catch (error) {
         console.error("워크스페이스 추가 실패:", error);
         alert("워크스페이스 추가 중 오류가 발생했습니다.");
+      }
+    },
+    openInviteModal() {
+      this.isInviteModalOpen = true;
+      this.closeEditModal();
+    },
+    closeInviteModal() {
+      this.isInviteModalOpen = false;
+      this.inviteEmail = ""; // 입력 필드 초기화
+    },
+    async inviteMember() {
+      if (!this.inviteEmail.trim()) {
+        alert("초대할 이메일을 입력해주세요.");
+        return;
+      }
+
+      try {
+        console.log(this.inviteEmail.trim());
+        await workspaceApi.inviteMember(this.editWorkspaceId, {
+          email: this.inviteEmail.trim(),
+        });
+        alert("초대가 성공적으로 완료되었습니다.");
+        this.closeInviteModal(); // 모달 닫기
+      } catch (error) {
+        console.error("초대 실패:", error);
+        alert("초대 중 오류가 발생했습니다.");
       }
     },
   },
@@ -434,5 +486,21 @@ export default {
   font-size: 14px;
   margin: 16px 0; /* 위아래 여백 추가 */
   font-style: italic; /* 텍스트를 강조 */
+}
+.no-members-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.invite-button {
+  padding: 8px 16px;
+  background: #5592fb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
 }
 </style>

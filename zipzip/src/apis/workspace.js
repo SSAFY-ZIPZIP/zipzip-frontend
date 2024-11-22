@@ -25,4 +25,9 @@ export const workspaceApi = {
   getWorkspaceMembers: (workspaceId) => {
     return api.get(`/v1/workspaces/${workspaceId}/members`);
   },
+
+  // 워크스페이스 멤버 초대하기
+  inviteMember(workspaceId, requestBody) {
+    return api.post(`/v1/workspaces/${workspaceId}/invite`, requestBody);
+  },
 };
