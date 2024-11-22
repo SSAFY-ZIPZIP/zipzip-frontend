@@ -276,14 +276,14 @@ export default {
 </script>
 
 <style scoped>
-/* 전체 컨테이너 */
 .workspace-container {
   padding: 40px;
   max-width: 1200px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
-
-/* 타이틀 스타일 */
 .title-container {
   text-align: center;
   margin-bottom: 32px;
@@ -297,32 +297,41 @@ export default {
   font-size: 14px;
   color: #666;
 }
-
-/* 워크스페이스 그리드 */
 .workspace-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px; /* 카드 간 간격을 조금 늘림 */
+  display: grid; /* 바둑판 스타일을 위한 grid 사용 */
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(200px, 1fr)
+  ); /* 카드 최소 크기 200px, 나머지는 균등 분배 */
+  gap: 20px; /* 카드 간의 간격 */
+  width: 100%; /* 부모 요소에 맞게 너비 설정 */
 }
-
-/* 카드 스타일 */
 .workspace-card {
   background: #f9f9f9;
   border: 1px solid #e0e0e0;
   border-radius: 10px;
+  height: 120px; /* 고정 높이 */
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  height: 120px;
-  cursor: pointer;
-  padding: 16px; /* 내부 여백 추가 */
+  flex-direction: column; /* 수직으로 내용 정렬 */
+  justify-content: center; /* 내용 가운데 정렬 */
+  align-items: center; /* 내용 가운데 정렬 */
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .workspace-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+.add-card {
+  border: 2px dashed #ccc;
+  color: #aaa;
+  font-size: 24px;
+  background: #fafafa;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.add-card:hover {
+  background: #f5f5f5;
 }
 
 /* 카드 내부 헤더 */
@@ -335,7 +344,6 @@ export default {
   top: 8px;
   right: 8px;
 }
-
 /* 카드 텍스트 중앙 정렬 */
 .card-content {
   display: flex;

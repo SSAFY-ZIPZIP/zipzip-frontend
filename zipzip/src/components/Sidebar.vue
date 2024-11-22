@@ -16,19 +16,21 @@
 <script>
 export default {
   name: "Sidebar",
+  props: {
+    menus: {
+      type: Array,
+      required: true,
+    },
+  },
   data() {
     return {
-      menus: [
-        "위치로 검색하기",
-        "아파트명으로 검색하기",
-        "실거래가로 검색하기",
-      ],
       selectedMenu: 0,
     };
   },
   methods: {
     selectMenu(index) {
       this.selectedMenu = index;
+      this.$emit("menu-select", index); // 부모 컴포넌트로 선택된 메뉴 전달
     },
   },
 };
@@ -37,18 +39,18 @@ export default {
 <style scoped>
 .sidebar {
   width: 200px;
-  background-color: #ebf4fc;
+  background-color: #f9fafb;
   padding: 20px;
   border-radius: 10px;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .menu-list {
-  width: 100%;
   padding: 0;
   list-style-type: none;
-  text-align: center;
+  margin: 0;
 }
 
 .menu-item {
@@ -57,10 +59,17 @@ export default {
   cursor: pointer;
   font-weight: 500;
   color: #666;
+  text-align: left;
+  border-radius: 4px;
+}
+
+.menu-item:hover {
+  background-color: #ebf4fc;
 }
 
 .menu-item.selected {
   color: #5592fb;
   font-weight: bold;
+  background-color: #ebf4fc;
 }
 </style>

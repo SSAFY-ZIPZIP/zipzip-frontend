@@ -89,6 +89,7 @@ export default {
     const profileImageUrl = ref("");
     const menuItems = ["매물.zip", "청약.zip", "우리.zip"];
     const isLoading = ref(true);
+    const selectedMenu = ref(0);
 
     const handleImageError = (e) => {
       console.error("Profile image failed to load:", e);
@@ -160,7 +161,18 @@ export default {
     };
 
     const selectMenu = (index) => {
-      emit("menu-select", index);
+      selectedMenu.value = index;
+
+      // 선택된 메뉴에 따라 라우터 경로 변경
+      if (index === 0) {
+        router.push("/"); // 매물.zip
+      } else if (index === 1) {
+        router.push("/cheongyak"); // 청약.zip
+      } else if (index === 2) {
+        router.push("/workspace"); // 우리.zip
+      }
+
+      emit("menu-select", index); // 부모 컴포넌트로 선택 이벤트 전달
     };
 
     onMounted(() => {
