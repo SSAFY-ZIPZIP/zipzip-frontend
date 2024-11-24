@@ -1,9 +1,12 @@
 <template>
   <div class="navbar">
+    <!-- 로고 클릭 시 메인으로 이동 -->
     <div class="logo" @click="goToMain">
       <img src="@/assets/zipzipLogo.png" alt="집.zip Logo" class="logo-image" />
       <span><h2>집.zip</h2></span>
     </div>
+
+    <!-- 네비게이션 메뉴 -->
     <div class="menu">
       <span
         v-for="(item, index) in menuItems"
@@ -14,6 +17,8 @@
         {{ item }}
       </span>
     </div>
+
+    <!-- 유저 프로필 -->
     <div class="user-icon-wrapper" v-click-outside="closePopover">
       <div class="user-icon" @click="togglePopover">
         <template v-if="isAuthenticated && !isLoading">
@@ -29,6 +34,7 @@
         <i v-else class="fa fa-user-circle"></i>
       </div>
 
+      <!-- 팝오버 -->
       <div v-if="isPopoverVisible" class="popover-container">
         <div class="popover-arrow"></div>
         <div class="popover" :class="{ show: isPopoverVisible }">
@@ -69,7 +75,7 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { memberApi } from "@/apis/member";
 import { authApi } from "@/apis/auth";
@@ -77,9 +83,9 @@ import { authApi } from "@/apis/auth";
 export default {
   name: "Navbar",
   props: {
-    selectedMenu: Number,
+    selectedMenu: Number, // 부모에서 현재 선택된 메뉴 값 전달
   },
-  emits: ["menu-select", "auth-status-update"], // 부모(MainPage)로 이벤트 전달
+  emits: ["menu-select", "auth-status-update"], // 부모(MainPage 등)로 이벤트 전달
   setup(props, { emit }) {
     const router = useRouter();
     const isPopoverVisible = ref(false);
@@ -89,10 +95,8 @@ export default {
     const profileImageUrl = ref("");
     const menuItems = ["매물.zip", "청약.zip", "우리.zip"];
     const isLoading = ref(true);
-    const selectedMenu = ref(0);
 
     const handleImageError = (e) => {
-      console.error("Profile image failed to load:", e);
       e.target.style.display = "none";
       profileImageUrl.value = "";
     };
@@ -112,14 +116,13 @@ export default {
           username.value = response.data.nickname || "알 수 없는 사용자";
           email.value = response.data.email || "이메일 없음";
         } catch (error) {
-          console.error("사용자 정보 가져오기 실패:", error);
           isAuthenticated.value = false;
         }
       } else {
         isAuthenticated.value = false;
       }
 
-      emit("auth-status-update", isAuthenticated.value); // 부모로 인증 상태 전달
+      emit("auth-status-update", isAuthenticated.value);
       isLoading.value = false;
     };
 
@@ -127,9 +130,9 @@ export default {
       try {
         const refreshToken = localStorage.getItem("refreshToken");
         await authApi.logout(refreshToken);
-        localStorage.clear(); // 모든 로컬 저장소 제거
+        localStorage.clear();
         isAuthenticated.value = false;
-        emit("auth-status-update", isAuthenticated.value); // 부모로 상태 전달
+        emit("auth-status-update", isAuthenticated.value);
         closePopover();
         router.push("/");
       } catch (error) {
@@ -151,28 +154,14 @@ export default {
     };
 
     const goToMain = () => {
-      if (router.currentRoute.value.path === "/") {
-        // 메인 페이지에 있을 경우 새로고침
-        window.location.reload();
-      } else {
-        // 메인 페이지가 아닐 경우 라우팅
-        router.push("/");
-      }
+      router.push("/");
     };
 
     const selectMenu = (index) => {
-      selectedMenu.value = index;
-
-      // 선택된 메뉴에 따라 라우터 경로 변경
-      if (index === 0) {
-        router.push("/"); // 매물.zip
-      } else if (index === 1) {
-        router.push("/cheongyak"); // 청약.zip
-      } else if (index === 2) {
-        router.push("/workspace"); // 우리.zip
-      }
-
-      emit("menu-select", index); // 부모 컴포넌트로 선택 이벤트 전달
+      emit("menu-select", index); // 부모로 선택된 메뉴 이벤트 전달
+      if (index === 0) router.push("/");
+      else if (index === 1) router.push("/cheongyak");
+      else if (index === 2) router.push("/workspace");
     };
 
     onMounted(() => {
