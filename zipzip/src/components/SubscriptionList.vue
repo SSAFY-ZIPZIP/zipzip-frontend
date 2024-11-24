@@ -24,7 +24,9 @@
         <div class="list-header">
           <div class="list-actions">
             <button class="primary-button">청약 알리미 신청</button>
-            <button class="outline-button">청약 검색 필터</button>
+            <button class="outline-button" @click="openFilterModal">
+              청약 검색 필터
+            </button>
           </div>
         </div>
 
@@ -62,15 +64,13 @@
               {{ item.generalHouseHold }}/{{ item.specialHouseHold }}
             </div>
             <div class="col col-actions">
-              <div class="action-buttons">
-                <button
-                  class="like-button"
-                  @click="toggleFavorite(item)"
-                  :aria-label="item.isFavorite ? '관심 해제' : '관심 등록'"
-                >
-                  <Star :class="{ 'icon-filled': item.isFavorite }" size="20" />
-                </button>
-              </div>
+              <button
+                class="like-button"
+                @click="toggleFavorite(item)"
+                :aria-label="item.isFavorite ? '관심 해제' : '관심 등록'"
+              >
+                <Star :class="{ 'icon-filled': item.isFavorite }" size="20" />
+              </button>
             </div>
             <div class="col col-announcement">
               <button
@@ -78,7 +78,7 @@
                 @click="openAnnouncement(item.url)"
                 aria-label="모집공고 바로가기"
               >
-                <ArrowUpRight size="20" class="arrow-icon" />
+                <ArrowUpRight size="20" />
               </button>
             </div>
           </div>
@@ -86,23 +86,25 @@
       </div>
     </div>
 
-    <!-- 모달 -->
-    <div
-      v-if="isModalOpen"
-      class="modal-backdrop"
-      @click.self="closeProfileModal"
-    >
-      <div class="modal">
-        <h3 class="modal-title">내 맞춤 청약 정보</h3>
+    <!-- 검색 필터 모달 -->
+    <div v-if="isFilterModalOpen" class="modal-backdrop">
+      <div class="modal filter-modal">
+        <h3 class="modal-title">필터 검색</h3>
         <div class="modal-content">
+          <input
+            v-model="filter.aptName"
+            type="text"
+            class="search-input"
+            placeholder="아파트명 검색"
+          />
           <div class="input-group">
-            <label for="memberCategory">공급 대상</label>
+            <label for="filterCategory">공급 대상</label>
             <select
-              id="memberCategory"
-              v-model="profile.memberCategory"
+              id="filterCategory"
+              v-model="filter.category"
               class="dropdown"
             >
-              <option value="" disabled>공급 대상을 선택하세요</option>
+              <option value="">전체</option>
               <option
                 v-for="category in categories"
                 :key="category"
@@ -113,13 +115,9 @@
             </select>
           </div>
           <div class="input-group">
-            <label for="memberRegion">공급 지역</label>
-            <select
-              id="memberRegion"
-              v-model="profile.memberRegion"
-              class="dropdown"
-            >
-              <option value="" disabled>공급 지역을 선택하세요</option>
+            <label for="filterRegion">공급 지역</label>
+            <select id="filterRegion" v-model="filter.region" class="dropdown">
+              <option value="">전체</option>
               <option v-for="region in regions" :key="region" :value="region">
                 {{ region }}
               </option>
@@ -127,8 +125,8 @@
           </div>
         </div>
         <div class="modal-actions">
-          <button class="cancel-button" @click="closeProfileModal">취소</button>
-          <button class="save-button" @click="saveProfile">저장</button>
+          <button class="cancel-button" @click="closeFilterModal">취소</button>
+          <button class="save-button" @click="applyFilters">검색</button>
         </div>
       </div>
     </div>
@@ -141,20 +139,24 @@ import { subscriptionApi } from "@/apis/subscription";
 import { Star, ArrowUpRight } from "lucide-vue-next";
 
 export default {
-  name: "SubscriptionList",
-  components: {
-    Star,
-    ArrowUpRight,
-  },
+  components: { Star, ArrowUpRight },
   setup() {
+    // 기본 상태 관리
     const cheongyakList = ref([]);
     const isProfileMissing = ref(true);
     const isModalOpen = ref(false);
+    const isFilterModalOpen = ref(false); // 필터 모달 열림 상태
     const profile = ref({
       memberCategory: "",
       memberRegion: "",
     });
+    const filter = ref({
+      aptName: "",
+      category: "",
+      region: "",
+    });
 
+    // 카테고리 및 지역 데이터
     const categories = [
       "신혼부부",
       "다자녀",
@@ -186,6 +188,7 @@ export default {
       "충북",
     ];
 
+    // 프로필 조회
     const fetchProfile = async () => {
       try {
         const response = await subscriptionApi.getProfile();
@@ -201,6 +204,7 @@ export default {
       }
     };
 
+    // 청약 리스트 조회
     const fetchSubscriptions = async (page = 0, size = 10) => {
       try {
         const response = await subscriptionApi.getSubscriptions(page, size);
@@ -222,36 +226,7 @@ export default {
       }
     };
 
-    const openProfileModal = () => {
-      isModalOpen.value = true;
-    };
-
-    const closeProfileModal = () => {
-      isModalOpen.value = false;
-      profile.value = {
-        memberCategory: "",
-        memberRegion: "",
-      };
-    };
-
-    const saveProfile = async () => {
-      if (!profile.value.memberCategory || !profile.value.memberRegion) {
-        alert("모든 정보를 선택해주세요.");
-        return;
-      }
-
-      try {
-        await subscriptionApi.saveProfile(profile.value);
-        alert("프로필이 성공적으로 저장되었습니다!");
-        isModalOpen.value = false;
-        isProfileMissing.value = false;
-        await fetchSubscriptions();
-      } catch (error) {
-        console.error("프로필 저장 실패:", error);
-        alert("프로필 저장 중 오류가 발생했습니다.");
-      }
-    };
-
+    // 관심 토글
     const toggleFavorite = async (item) => {
       try {
         if (item.isFavorite) {
@@ -263,23 +238,56 @@ export default {
         }
       } catch (error) {
         console.error("즐겨찾기 토글 실패:", error);
-        alert("즐겨찾기 상태를 변경하는 중 오류가 발생했습니다.");
       }
     };
 
+    // 모집공고 바로가기
     const openAnnouncement = (url) => {
       if (url) {
         window.open(url, "_blank");
       }
     };
 
+    // 필터 모달 열기/닫기
+    const openFilterModal = () => (isFilterModalOpen.value = true);
+    const closeFilterModal = () => (isFilterModalOpen.value = false);
+
+    // 필터 적용
+    const applyFilters = async () => {
+      try {
+        const response = await subscriptionApi.getFilterSubscriptions(
+          0, // page
+          10, // size
+          filter.value.aptName || "", // aptName
+          filter.value.category || "", // category
+          filter.value.region || "" // region
+        );
+        cheongyakList.value = (response.data.content || []).map((item) => ({
+          subscriptionId: item.subscriptionId,
+          deadline: formatDate(item.deadline),
+          aptName: item.aptName,
+          category: item.category,
+          region: item.region,
+          address: item.address,
+          generalHouseHold: item.generalHouseHold || 0,
+          specialHouseHold: item.specialHouseHold || 0,
+          isFavorite: item.isFavorite || false,
+          url: item.url,
+        }));
+        closeFilterModal();
+      } catch (error) {
+        console.error("필터 적용 실패:", error);
+      }
+    };
+
+    // 날짜 포맷팅
     const formatDate = (dateString) => {
       if (!dateString) return "";
       const date = new Date(dateString);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}.${month}.${day}`;
+      return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}.${String(date.getDate()).padStart(2, "0")}`;
     };
 
     onMounted(fetchProfile);
@@ -288,12 +296,15 @@ export default {
       cheongyakList,
       isProfileMissing,
       isModalOpen,
+      isFilterModalOpen,
       profile,
+      filter,
       categories,
       regions,
-      openProfileModal,
-      closeProfileModal,
-      saveProfile,
+      openFilterModal,
+      closeFilterModal,
+      applyFilters,
+      fetchSubscriptions,
       toggleFavorite,
       openAnnouncement,
     };
@@ -302,6 +313,7 @@ export default {
 </script>
 
 <style scoped>
+/* 기본 레이아웃 */
 .cheongyak-container {
   display: flex;
   flex-direction: column;
@@ -328,6 +340,7 @@ export default {
   margin: 12px 0 0 0;
 }
 
+/* 콘텐츠 스타일 */
 .content {
   flex: 1;
 }
@@ -378,11 +391,30 @@ export default {
   border-bottom: 1px solid #eee;
 }
 
+.col {
+  padding: 0 8px;
+}
+
+.header-row {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.data-row:hover {
+  background-color: #f8f9fa;
+}
+
+.col-deadline {
+  color: #4b89dc;
+  font-weight: 500;
+}
+
+.col-actions,
 .col-announcement {
-  text-align: center;
   display: flex;
   justify-content: center;
-  align-items: center;
 }
 
 .announcement-button {
@@ -409,38 +441,13 @@ export default {
   font-size: 20px;
 }
 
-.col {
-  padding: 0 8px;
-}
-
-.header-row {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #495057;
-  font-size: 14px;
-}
-
-.data-row:hover {
-  background-color: #f8f9fa;
-}
-
-.col-deadline {
-  color: #4b89dc;
-  font-weight: 500;
-}
-
-.col-actions {
-  display: flex;
-  justify-content: center;
-}
-
+/* 관심 아이콘 스타일 */
 .action-buttons {
   display: flex;
   gap: 8px;
 }
 
-.like-button,
-.link-button {
+.like-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -454,8 +461,7 @@ export default {
   transition: all 0.2s;
 }
 
-.like-button:hover,
-.link-button:hover {
+.like-button:hover {
   background-color: #f1f3f5;
   color: #4b89dc;
 }
@@ -465,6 +471,7 @@ export default {
   fill: currentColor;
 }
 
+/* 필터 태그 */
 .type-tags {
   display: flex;
   gap: 8px;
@@ -484,75 +491,12 @@ export default {
   color: #4b89dc;
 }
 
-.region-text {
-  color: #666;
-  font-size: 14px;
-}
-
 .region-tag {
   background-color: #e9faf1;
   color: #40c057;
 }
 
-.action-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-
-.document-icon {
-  width: 20px;
-  height: 20px;
-  display: block;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' /%3E%3C/svg%3E");
-}
-
-.empty-message {
-  text-align: center;
-  padding: 40px;
-  color: #868e96;
-  font-size: 14px;
-}
-
-.no-profile-container {
-  max-width: 500px;
-  margin: 100px auto;
-  text-align: center;
-  background: white;
-  padding: 40px;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.no-profile-message {
-  font-size: 24px;
-  font-weight: bold;
-  color: #1a1a1a;
-  margin-bottom: 12px;
-}
-
-.no-profile-submessage {
-  font-size: 16px;
-  color: #666;
-  margin-bottom: 24px;
-}
-
-.action-button {
-  padding: 12px 24px;
-  font-size: 16px;
-  color: white;
-  background-color: #4b89dc;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.action-button:hover {
-  background-color: #3b79cc;
-}
-
+/* 모달 관련 스타일 */
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -646,10 +590,7 @@ export default {
   background-color: #3b79cc;
 }
 
-.cheongyak-list {
-  width: 100%;
-}
-
+/* 반응형 */
 @media (max-width: 1024px) {
   .table-row {
     grid-template-columns: 100px 180px 200px 1fr 100px 90px;
@@ -671,5 +612,79 @@ export default {
     padding: 3px 8px;
     font-size: 11px;
   }
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.filter-modal {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  width: 400px;
+  max-width: 90%;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.input-group {
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.dropdown {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cancel-button {
+  background-color: #e9ecef;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.save-button {
+  background-color: #4b89dc;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 </style>
