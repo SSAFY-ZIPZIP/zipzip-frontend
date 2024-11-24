@@ -8,6 +8,18 @@ export const subscriptionApi = {
       params: { page, size },
     }),
 
+  // 필터링 조건으로 목록 가져오기
+  getFilterSubscriptions: (page, size, aptName, category, region) =>
+    api.get(`/v1/subscriptions/list`, {
+      params: {
+        "apt-name": aptName,
+        category: category,
+        region: region,
+        page: page,
+        size: size,
+      },
+    }),
+
   // 즐겨찾기 등록
   addFavorite: (subscriptionId) =>
     api.post(`/v1/subscriptions/${subscriptionId}/me/favorite`),
