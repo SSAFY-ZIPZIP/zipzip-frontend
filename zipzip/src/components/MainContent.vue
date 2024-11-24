@@ -1,7 +1,9 @@
 <template>
   <div class="main-content">
-    <h1>위치로 검색하기</h1>
-    <p>매물을 확인하고 싶은 위치를 기반으로 검색해보세요!</p>
+    <div class="header">
+      <h1 class="title">위치로 검색하기</h1>
+      <p class="subtitle">매물을 확인하고 싶은 위치를 기반으로 검색해보세요!</p>
+    </div>
   </div>
 </template>
 
@@ -13,17 +15,26 @@ export default {
 
 <style scoped>
 .main-content {
-  padding: 20px;
-  background-color: white;
-  border-radius: 10px;
-  margin-left: 20px;
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 40px;
 }
-h1 {
-  font-size: 24px;
-  font-weight: bold;
+.header {
+  text-align: left;
+  margin-bottom: 40px;
 }
-p {
+
+.title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.subtitle {
+  font-size: 16px;
   color: #666;
+  margin: 12px 0 0 0;
 }
 </style>
