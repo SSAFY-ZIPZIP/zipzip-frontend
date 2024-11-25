@@ -9,8 +9,11 @@
     <!-- 콘텐츠 영역 -->
     <div class="content">
       <!-- 프로필이 없는 경우 -->
-      <div v-if="isProfileMissing" class="no-profile-container">
-        <p class="no-profile-message">아직 나의 정보를 입력 하시지 않았네요!</p>
+      <div
+        v-if="isProfileMissing && !isLoading && !isProfileLoading"
+        class="no-profile-container"
+      >
+        <p class="no-profile-message">아직 나의 정보를 입력하지 않으셨네요!</p>
         <p class="no-profile-submessage">
           나의 정보를 입력하고 맞춤 청약 정보를 확인해보세요!
         </p>
@@ -19,11 +22,16 @@
         </button>
       </div>
 
+      <!-- 로딩 상태 -->
+      <SkeletonLoader v-else-if="isProfileLoading || isLoading" />
+
       <!-- 청약 리스트 -->
       <div v-else class="cheongyak-list">
         <div class="list-header">
           <div class="list-actions">
-            <button class="primary-button">청약 알리미 신청</button>
+            <button class="primary-button" @click="openUpdateProfileModal">
+              내 정보 수정
+            </button>
             <button class="outline-button" @click="openFilterModal">
               청약 검색 필터
             </button>
@@ -85,231 +93,375 @@
         </div>
       </div>
     </div>
-
-    <!-- 검색 필터 모달 -->
-    <div v-if="isFilterModalOpen" class="modal-backdrop">
-      <div class="modal filter-modal">
-        <h3 class="modal-title">필터 검색</h3>
-        <div class="modal-content">
-          <input
-            v-model="filter.aptName"
-            type="text"
-            class="search-input"
-            placeholder="아파트명 검색"
-          />
-          <div class="input-group">
-            <label for="filterCategory">공급 대상</label>
-            <select
-              id="filterCategory"
-              v-model="filter.category"
-              class="dropdown"
+  </div>
+  <!-- 검색 필터 모달 -->
+  <div v-if="isFilterModalOpen" class="modal-backdrop">
+    <div class="modal filter-modal">
+      <h3 class="modal-title">필터 검색</h3>
+      <div class="modal-content">
+        <input
+          v-model="filter.aptName"
+          type="text"
+          class="search-input"
+          placeholder="아파트명 검색"
+        />
+        <div class="input-group">
+          <label for="filterCategory">공급 대상</label>
+          <select
+            id="filterCategory"
+            v-model="filter.category"
+            class="dropdown"
+          >
+            <option value="">전체</option>
+            <option
+              v-for="category in categories"
+              :key="category"
+              :value="category"
             >
-              <option value="">전체</option>
-              <option
-                v-for="category in categories"
-                :key="category"
-                :value="category"
-              >
-                {{ category }}
-              </option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label for="filterRegion">공급 지역</label>
-            <select id="filterRegion" v-model="filter.region" class="dropdown">
-              <option value="">전체</option>
-              <option v-for="region in regions" :key="region" :value="region">
-                {{ region }}
-              </option>
-            </select>
-          </div>
+              {{ category }}
+            </option>
+          </select>
         </div>
-        <div class="modal-actions">
-          <button class="cancel-button" @click="closeFilterModal">취소</button>
-          <button class="save-button" @click="applyFilters">검색</button>
+        <div class="input-group">
+          <label for="filterRegion">공급 지역</label>
+          <select id="filterRegion" v-model="filter.region" class="dropdown">
+            <option value="">전체</option>
+            <option v-for="region in regions" :key="region" :value="region">
+              {{ region }}
+            </option>
+          </select>
         </div>
+      </div>
+      <div class="modal-actions">
+        <button class="cancel-button" @click="closeFilterModal">취소</button>
+        <button class="save-button" @click="applyFilters">검색</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 내 프로필 입력 모달 -->
+  <div
+    v-if="isProfileSaveModalOpen"
+    class="modal-backdrop"
+    @click.self="closeProfileModal"
+  >
+    <div class="modal">
+      <h3 class="modal-title">내 맞춤 청약 정보</h3>
+      <div class="modal-content">
+        <div class="input-group">
+          <label for="memberCategory">공급 대상</label>
+          <select
+            id="memberCategory"
+            v-model="profile.memberCategory"
+            class="dropdown"
+          >
+            <option value="" disabled>공급 대상을 선택하세요</option>
+            <option
+              v-for="category in categories"
+              :key="category"
+              :value="category"
+            >
+              {{ category }}
+            </option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="memberRegion">공급 지역</label>
+          <select
+            id="memberRegion"
+            v-model="profile.memberRegion"
+            class="dropdown"
+          >
+            <option value="" disabled>공급 지역을 선택하세요</option>
+            <option v-for="region in regions" :key="region" :value="region">
+              {{ region }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="cancel-button" @click="closeProfileModal">취소</button>
+        <button class="save-button" @click="saveProfile">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 내 프로필 수정 모달 -->
+  <div
+    v-if="isProfileUpdateModalOpen"
+    class="modal-backdrop"
+    @click.self="closeUpdateProfileModal"
+  >
+    <div class="modal">
+      <h3 class="modal-title">내 맞춤 청약 정보 수정</h3>
+      <div class="modal-content">
+        <div class="input-group">
+          <label for="memberCategory">공급 대상</label>
+          <select
+            id="memberCategory"
+            v-model="profile.memberCategory"
+            class="dropdown"
+          >
+            <option value="" disabled>공급 대상을 선택하세요</option>
+            <option
+              v-for="category in categories"
+              :key="category"
+              :value="category"
+            >
+              {{ category }}
+            </option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="memberRegion">공급 지역</label>
+          <select
+            id="memberRegion"
+            v-model="profile.memberRegion"
+            class="dropdown"
+          >
+            <option value="" disabled>공급 지역을 선택하세요</option>
+            <option v-for="region in regions" :key="region" :value="region">
+              {{ region }}
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="cancel-button" @click="closeUpdateProfileModal">
+          취소
+        </button>
+        <button class="save-button" @click="updateProfile">수정</button>
       </div>
     </div>
   </div>
 </template>
 
-<script>
+<script setup>
 import { ref, onMounted } from "vue";
 import { subscriptionApi } from "@/apis/subscription";
 import { Star, ArrowUpRight } from "lucide-vue-next";
+import SkeletonLoader from "@/components/Skeleton.vue";
 
-export default {
-  components: { Star, ArrowUpRight },
-  setup() {
-    // 기본 상태 관리
-    const cheongyakList = ref([]);
-    const isProfileMissing = ref(true);
-    const isModalOpen = ref(false);
-    const isFilterModalOpen = ref(false); // 필터 모달 열림 상태
-    const profile = ref({
-      memberCategory: "",
-      memberRegion: "",
-    });
-    const filter = ref({
-      aptName: "",
-      category: "",
-      region: "",
-    });
+const cheongyakList = ref([]);
+const isProfileMissing = ref(true);
+const isProfileSaveModalOpen = ref(false);
+const isProfileUpdateModalOpen = ref(false);
+const isModalOpen = ref(false);
+const isFilterModalOpen = ref(false);
 
-    // 카테고리 및 지역 데이터
-    const categories = [
-      "신혼부부",
-      "다자녀",
-      "생애최초",
-      "청년",
-      "노부모부양",
-      "신생아",
-      "기관추천",
-      "이전기관",
-      "일반",
-    ];
-    const regions = [
-      "서울",
-      "광주",
-      "대구",
-      "대전",
-      "부산",
-      "세종",
-      "울산",
-      "인천",
-      "강원",
-      "경기",
-      "경남",
-      "경북",
-      "전남",
-      "전북",
-      "제주",
-      "충남",
-      "충북",
-    ];
+const profile = ref({
+  memberCategory: "",
+  memberRegion: "",
+});
+const filter = ref({
+  aptName: "",
+  category: "",
+  region: "",
+});
 
-    // 프로필 조회
-    const fetchProfile = async () => {
-      try {
-        const response = await subscriptionApi.getProfile();
-        isProfileMissing.value = response.status === 204;
+const categories = [
+  "신혼부부",
+  "다자녀",
+  "생애최초",
+  "청년",
+  "노부모부양",
+  "신생아",
+  "기관추천",
+  "이전기관",
+  "일반",
+];
+const regions = [
+  "서울",
+  "광주",
+  "대구",
+  "대전",
+  "부산",
+  "세종",
+  "울산",
+  "인천",
+  "강원",
+  "경기",
+  "경남",
+  "경북",
+  "전남",
+  "전북",
+  "제주",
+  "충남",
+  "충북",
+];
 
-        if (!isProfileMissing.value && response.data) {
-          profile.value = response.data;
-          await fetchSubscriptions();
-        }
-      } catch (error) {
-        console.error("프로필 정보 불러오기 실패:", error);
-        isProfileMissing.value = true;
-      }
-    };
+const isLoading = ref(false);
+const isProfileLoading = ref(false);
 
-    // 청약 리스트 조회
-    const fetchSubscriptions = async (page = 0, size = 10) => {
-      try {
-        const response = await subscriptionApi.getSubscriptions(page, size);
-        cheongyakList.value = (response.data.content || []).map((item) => ({
-          subscriptionId: item.subscriptionId,
-          deadline: formatDate(item.deadline),
-          aptName: item.aptName,
-          category: item.category,
-          region: item.region,
-          address: item.address,
-          generalHouseHold: item.generalHouseHold || 0,
-          specialHouseHold: item.specialHouseHold || 0,
-          isFavorite: item.isFavorite || false,
-          url: item.url,
-        }));
-      } catch (error) {
-        console.error("청약 데이터 불러오기 실패:", error);
-        cheongyakList.value = [];
-      }
-    };
+const fetchProfile = async () => {
+  isProfileLoading.value = true;
+  try {
+    const response = await subscriptionApi.getProfile();
+    isProfileMissing.value = response.status === 204;
 
-    // 관심 토글
-    const toggleFavorite = async (item) => {
-      try {
-        if (item.isFavorite) {
-          await subscriptionApi.removeFavorite(item.subscriptionId);
-          item.isFavorite = false;
-        } else {
-          await subscriptionApi.addFavorite(item.subscriptionId);
-          item.isFavorite = true;
-        }
-      } catch (error) {
-        console.error("즐겨찾기 토글 실패:", error);
-      }
-    };
-
-    // 모집공고 바로가기
-    const openAnnouncement = (url) => {
-      if (url) {
-        window.open(url, "_blank");
-      }
-    };
-
-    // 필터 모달 열기/닫기
-    const openFilterModal = () => (isFilterModalOpen.value = true);
-    const closeFilterModal = () => (isFilterModalOpen.value = false);
-
-    // 필터 적용
-    const applyFilters = async () => {
-      try {
-        const response = await subscriptionApi.getFilterSubscriptions(
-          0, // page
-          10, // size
-          filter.value.aptName || "", // aptName
-          filter.value.category || "", // category
-          filter.value.region || "" // region
-        );
-        cheongyakList.value = (response.data.content || []).map((item) => ({
-          subscriptionId: item.subscriptionId,
-          deadline: formatDate(item.deadline),
-          aptName: item.aptName,
-          category: item.category,
-          region: item.region,
-          address: item.address,
-          generalHouseHold: item.generalHouseHold || 0,
-          specialHouseHold: item.specialHouseHold || 0,
-          isFavorite: item.isFavorite || false,
-          url: item.url,
-        }));
-        closeFilterModal();
-      } catch (error) {
-        console.error("필터 적용 실패:", error);
-      }
-    };
-
-    // 날짜 포맷팅
-    const formatDate = (dateString) => {
-      if (!dateString) return "";
-      const date = new Date(dateString);
-      return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(
-        2,
-        "0"
-      )}.${String(date.getDate()).padStart(2, "0")}`;
-    };
-
-    onMounted(fetchProfile);
-
-    return {
-      cheongyakList,
-      isProfileMissing,
-      isModalOpen,
-      isFilterModalOpen,
-      profile,
-      filter,
-      categories,
-      regions,
-      openFilterModal,
-      closeFilterModal,
-      applyFilters,
-      fetchSubscriptions,
-      toggleFavorite,
-      openAnnouncement,
-    };
-  },
+    if (!isProfileMissing.value && response.data) {
+      profile.value = response.data;
+      await fetchSubscriptions();
+    }
+  } catch (error) {
+    console.error("프로필 정보 불러오기 실패:", error);
+    isProfileMissing.value = true;
+  } finally {
+    isProfileLoading.value = false;
+  }
 };
+
+const fetchSubscriptions = async (page = 0, size = 10) => {
+  isLoading.value = true;
+
+  try {
+    const response = await subscriptionApi.getSubscriptions(page, size);
+    cheongyakList.value = (response.data.content || []).map((item) => ({
+      subscriptionId: item.subscriptionId,
+      deadline: formatDate(item.deadline),
+      aptName: item.aptName,
+      category: item.category,
+      region: item.region,
+      address: item.address,
+      generalHouseHold: item.generalHouseHold || 0,
+      specialHouseHold: item.specialHouseHold || 0,
+      isFavorite: item.isFavorite || false,
+      url: item.url,
+    }));
+  } catch (error) {
+    console.error("청약 데이터 불러오기 실패:", error);
+    cheongyakList.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const formatDate = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}.${String(date.getDate()).padStart(2, "0")}`;
+};
+
+const toggleFavorite = async (item) => {
+  try {
+    if (item.isFavorite) {
+      await subscriptionApi.removeFavorite(item.subscriptionId);
+      item.isFavorite = false;
+    } else {
+      await subscriptionApi.addFavorite(item.subscriptionId);
+      item.isFavorite = true;
+    }
+  } catch (error) {
+    console.error("즐겨찾기 토글 실패:", error);
+  }
+};
+
+const openAnnouncement = (url) => {
+  if (url) {
+    window.open(url, "_blank");
+  }
+};
+
+// 내 프로필 입력 모달 열기
+const openProfileModal = () => {
+  isProfileSaveModalOpen.value = true;
+};
+// 내 프로필 입력 모달 닫기
+const closeProfileModal = () => {
+  isProfileSaveModalOpen.value = false;
+  profile.value = {
+    memberCategory: "",
+    memberRegion: "",
+  };
+};
+
+// 프로필 저장
+const saveProfile = async () => {
+  if (!profile.value.memberCategory || !profile.value.memberRegion) {
+    alert("모든 정보를 선택해주세요.");
+    return;
+  }
+  try {
+    await subscriptionApi.saveProfile(profile.value);
+    alert("프로필이 성공적으로 저장되었습니다!");
+    isProfileSaveModalOpen.value = false;
+    isProfileMissing.value = false;
+    await fetchSubscriptions();
+  } catch (error) {
+    console.error("프로필 저장 실패:", error);
+    alert("프로필 저장 중 오류가 발생했습니다.");
+  }
+};
+
+// 내 프로필 수정 모달 열기
+const openUpdateProfileModal = () => {
+  isProfileUpdateModalOpen.value = true;
+};
+
+// 내 프로필 수정 모달 닫기
+const closeUpdateProfileModal = () => {
+  isProfileUpdateModalOpen.value = false;
+  profile.value = {
+    memberCategory: profile.value.memberCategory,
+    memberRegion: profile.value.memberRegion,
+  };
+};
+
+// 프로필 저장
+const updateProfile = async () => {
+  if (!profile.value.memberCategory || !profile.value.memberRegion) {
+    alert("모든 정보를 선택해주세요.");
+    return;
+  }
+  try {
+    await subscriptionApi.updateProfile(profile.value);
+    alert("프로필이 성공적으로 수정되었습니다!");
+    isProfileUpdateModalOpen.value = false;
+    await fetchSubscriptions();
+  } catch (error) {
+    console.error("프로필 수정 실패:", error);
+    alert("프로필 수정 중 오류가 발생했습니다.");
+  }
+};
+
+// 필터 모달 열기/닫기
+const openFilterModal = () => (isFilterModalOpen.value = true);
+const closeFilterModal = () => (isFilterModalOpen.value = false);
+
+// 필터 적용
+const applyFilters = async () => {
+  try {
+    const response = await subscriptionApi.getFilterSubscriptions(
+      0, // page
+      10, // size
+      filter.value.aptName || "", // aptName
+      filter.value.category || "", // category
+      filter.value.region || "" // region
+    );
+    cheongyakList.value = (response.data.content || []).map((item) => ({
+      subscriptionId: item.subscriptionId,
+      deadline: formatDate(item.deadline),
+      aptName: item.aptName,
+      category: item.category,
+      region: item.region,
+      address: item.address,
+      generalHouseHold: item.generalHouseHold || 0,
+      specialHouseHold: item.specialHouseHold || 0,
+      isFavorite: item.isFavorite || false,
+      url: item.url,
+    }));
+    closeFilterModal();
+  } catch (error) {
+    console.error("필터 적용 실패:", error);
+  }
+};
+
+onMounted(() => {
+  fetchProfile();
+});
 </script>
 
 <style scoped>
@@ -527,6 +679,7 @@ export default {
 
 .modal-content {
   margin-bottom: 24px;
+  padding: 16px;
 }
 
 .input-group {
@@ -542,7 +695,6 @@ export default {
 
 .dropdown {
   width: 100%;
-  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
@@ -642,7 +794,7 @@ export default {
 }
 
 .search-input {
-  width: 100%;
+  width: 94%;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -685,5 +837,40 @@ export default {
   padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
+}
+
+.no-profile-container {
+  max-width: 500px;
+  margin: 100px auto;
+  text-align: center;
+  background: white;
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.no-profile-message {
+  font-size: 24px;
+  font-weight: bold;
+  color: #1a1a1a;
+  margin-bottom: 12px;
+}
+.no-profile-submessage {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 24px;
+}
+.action-button {
+  padding: 12px 24px;
+  font-size: 16px;
+  color: white;
+  background-color: #4b89dc;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+.action-button:hover {
+  background-color: #3b79cc;
 }
 </style>
