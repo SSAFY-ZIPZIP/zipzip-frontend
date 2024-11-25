@@ -94,6 +94,7 @@
       </div>
     </div>
   </div>
+
   <!-- 검색 필터 모달 -->
   <div v-if="isFilterModalOpen" class="modal-backdrop">
     <div class="modal filter-modal">
@@ -246,7 +247,7 @@ const cheongyakList = ref([]);
 const isProfileMissing = ref(true);
 const isProfileSaveModalOpen = ref(false);
 const isProfileUpdateModalOpen = ref(false);
-const isModalOpen = ref(false);
+
 const isFilterModalOpen = ref(false);
 
 const profile = ref({
