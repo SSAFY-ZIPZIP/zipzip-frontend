@@ -1,16 +1,20 @@
 <template>
   <div>
     <Navbar :selectedMenu="selectedMenu" @menu-select="handleMenuSelect" />
-
     <div class="main-container">
       <Sidebar
         :menus="currentSidebarMenus"
         :selectedSidebarIndex="selectedSidebarIndex"
         @menu-select="handleSidebarSelect"
-        class="sidebar"
       />
-      <div class="content">
-        <component :is="currentContentComponent" />
+      <div class="main-content">
+        <MainContent v-if="selectedMenu === 0 && selectedSidebarIndex === 0" />
+        <SubscriptionList
+          v-if="selectedMenu === 1 && selectedSidebarIndex === 0"
+        />
+        <FavoriteSubscriptionList
+          v-if="selectedMenu === 1 && selectedSidebarIndex === 1"
+        />
       </div>
     </div>
   </div>
@@ -33,11 +37,11 @@ export default {
   },
   data() {
     return {
-      selectedMenu: 0, // Navbar에서 선택된 메뉴
-      selectedSidebarIndex: 0, // Sidebar에서 선택된 메뉴
+      selectedMenu: 0, // 선택된 네비게이션 메뉴
+      selectedSidebarIndex: 0, // 선택된 사이드바 메뉴
       sidebarMenusMap: {
-        0: ["위치로 검색하기", "아파트명으로 검색하기", "실거래가로 검색하기"], // MainPage Sidebar
-        1: ["나에게 맞는 청약", "관심있는 청약"], // SubscriptionPage Sidebar
+        0: ["위치로 검색하기", "아파트명으로 검색하기", "실거래가로 검색하기"], // 매물.zip 메뉴
+        1: ["나에게 맞는 청약", "관심있는 청약"], // 청약.zip 메뉴
       },
     };
   },
@@ -45,21 +49,14 @@ export default {
     currentSidebarMenus() {
       return this.sidebarMenusMap[this.selectedMenu] || [];
     },
-    currentContentComponent() {
-      // Sidebar 선택에 따라 렌더링할 컴포넌트 반환
-      if (this.selectedMenu === 0 && this.selectedSidebarIndex === 0)
-        return "MainContent";
-      if (this.selectedMenu === 1 && this.selectedSidebarIndex === 0)
-        return "SubscriptionList";
-      if (this.selectedMenu === 1 && this.selectedSidebarIndex === 1)
-        return "FavoriteSubscriptionList";
-      return null;
-    },
   },
   methods: {
     handleMenuSelect(index) {
       this.selectedMenu = index;
-      this.selectedSidebarIndex = 0; // Sidebar 선택 초기화
+      this.selectedSidebarIndex = 0; // 사이드바 초기화
+      if (index === 0) this.$router.push("/search");
+      if (index === 1) this.$router.push("/cheongyak");
+      if (index === 2) this.$router.push("/workspace");
     },
     handleSidebarSelect(index) {
       this.selectedSidebarIndex = index;
@@ -71,22 +68,12 @@ export default {
 <style scoped>
 .main-container {
   display: flex;
-  gap: 20px; /* 사이드바와 콘텐츠 간 간격 */
+  gap: 20px;
   padding: 20px;
-  background-color: #f9fafb;
 }
-
-.sidebar {
-  width: 250px; /* 사이드바 너비 */
-  background-color: #ffffff;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.content {
+.main-content {
   flex: 1;
-  background-color: #ffffff;
+  background-color: #fff;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
