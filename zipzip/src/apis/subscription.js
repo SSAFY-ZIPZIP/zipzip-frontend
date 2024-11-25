@@ -57,4 +57,8 @@ export const subscriptionApi = {
   // 개별 알림 취소
   removeAlarm: (subscriptionId) =>
     api.delete(`/v1/subscriptions/${subscriptionId}/me/alarm`),
+
+  // 청약 프로필 수정
+  updateProfile: (profileData) =>
+    api.patch("/v1/subscriptions/profile/me", profileData),
 };
