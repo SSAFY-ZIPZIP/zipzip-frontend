@@ -49,7 +49,7 @@
           class="modal-input"
           placeholder="워크스페이스명 입력"
         />
-        <h4>함께하는 사람</h4>
+        <h4 class="member-list-title">함께하는 사람</h4>
         <!-- 멤버 리스트 -->
         <div class="members-list">
           <template v-if="editWorkspaceMembers.length === 0">
@@ -305,6 +305,7 @@ export default {
   ); /* 카드 최소 크기 200px, 나머지는 균등 분배 */
   gap: 20px; /* 카드 간의 간격 */
   width: 100%; /* 부모 요소에 맞게 너비 설정 */
+  margin-top: 50px;
 }
 .workspace-card {
   background: #f9f9f9;
@@ -465,10 +466,15 @@ export default {
 }
 .members-list {
   max-height: 150px;
+  width: calc(100% - 24px); /* 좌우 패딩 포함하여 중앙에 정렬 */
   overflow-y: auto;
-  border: 1px solid #ddd;
   border-radius: 4px;
-  padding: 8px;
+  padding: 14px;
+  border: 1px solid #e0e0e0;
+  margin: 5px;
+}
+.member-list-title {
+  margin: 7px;
 }
 .member-item {
   display: flex;
@@ -476,7 +482,6 @@ export default {
   align-items: center;
   padding: 8px;
   margin-bottom: 8px;
-  border: 1px solid #e0e0e0;
   border-radius: 4px;
 }
 .remove-button {
@@ -492,7 +497,7 @@ export default {
   text-align: center;
   color: #999;
   font-size: 14px;
-  margin: 16px 0; /* 위아래 여백 추가 */
+  margin: 10px 0; /* 위아래 여백 추가 */
   font-style: italic; /* 텍스트를 강조 */
 }
 .no-members-container {
