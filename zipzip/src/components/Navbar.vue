@@ -192,7 +192,7 @@ export default {
 .navbar {
   display: flex;
   align-items: center;
-  padding: 20px;
+  padding: 20px 20px 0px 20px; /* 위, 오른쪽, 아래, 왼쪽 */
   background-color: #f9fafb;
   position: relative;
 }
@@ -212,14 +212,15 @@ export default {
 
 .menu {
   display: flex;
-  gap: 40px;
+  gap: 70px;
   justify-content: start;
-  margin-left: 20px;
+  margin-left: 65px;
   flex-grow: 1;
 }
 
 .menu-item {
-  font-weight: 500;
+  font-weight: 700;
+  font-size: large;
   color: #666;
   cursor: pointer;
 }
@@ -297,8 +298,8 @@ export default {
 }
 
 .user-icon .profile-image {
-  width: 24px;
-  height: 24px;
+  width: 35px;
+  height: 35px;
   border-radius: 50%;
   object-fit: cover;
 }
