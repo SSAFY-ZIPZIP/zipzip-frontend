@@ -17,6 +17,7 @@
       <div class="content">
         <SubscriptionList v-if="selectedSidebarIndex === 0" />
         <FavoriteSubscriptionList v-if="selectedSidebarIndex === 1" />
+        <SubscriptionChatbotContent v-if="selectedSidebarIndex === 2" />
       </div>
     </div>
   </div>
@@ -27,6 +28,7 @@ import Navbar from "@/components/Navbar.vue";
 import Sidebar from "@/components/Sidebar.vue";
 import SubscriptionList from "@/components/SubscriptionList.vue";
 import FavoriteSubscriptionList from "@/components/FavoriteSubscriptionList.vue";
+import SubscriptionChatbotContent from "@/components/SubscriptionChatbotContent.vue";
 
 export default {
   name: "SubscriptionPage",
@@ -35,11 +37,12 @@ export default {
     Sidebar,
     SubscriptionList,
     FavoriteSubscriptionList,
+    SubscriptionChatbotContent,
   },
   data() {
     return {
       selectedSidebarIndex: 0, // 현재 선택된 사이드바 메뉴
-      sidebarMenus: ["나에게 맞는 청약", "관심있는 청약"], // 사이드바 메뉴 리스트
+      sidebarMenus: ["나에게 맞는 청약", "관심있는 청약", "청약 관련 AI 상담"], // 사이드바 메뉴 리스트
     };
   },
   methods: {
