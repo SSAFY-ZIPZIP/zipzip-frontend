@@ -61,4 +61,8 @@ export const subscriptionApi = {
   // 청약 프로필 수정
   updateProfile: (profileData) =>
     api.patch("/v1/subscriptions/profile/me", profileData),
+
+  // 챗봇
+  chatbot: (userMessage, signal) =>
+    api.post("/v1/subscriptions/chat", { userMessage }, { signal }),
 };
