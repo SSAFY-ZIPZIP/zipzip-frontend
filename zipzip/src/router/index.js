@@ -5,6 +5,7 @@ import OAuth from "@/views/OAuth.vue";
 import LoginPage from "@/views/LoginPage.vue";
 import SubscriptionPage from "@/views/SubscriptionPage.vue";
 import WorkspacePage from "@/views/WorkspacePage.vue";
+import WorkspacePropertiesPage from "@/views/WorkspacePropertiesPage.vue";
 
 const routes = [
   {
@@ -31,6 +32,12 @@ const routes = [
     path: "/workspace",
     name: "WorkspaceZip",
     component: WorkspacePage,
+  },
+  {
+    path: "/workspace/:workspaceId/:workspaceName",
+    name: "WorkspacePropertiesPage",
+    component: WorkspacePropertiesPage,
+    props: true,
   },
 ];
 

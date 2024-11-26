@@ -291,8 +291,8 @@ export default {
 }
 
 .profile-image {
-  width: 40px;
-  height: 40px;
+  width: 35px;
+  height: 35px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -305,13 +305,13 @@ export default {
 }
 
 .profile-icon {
-  font-size: 40px;
+  font-size: 35px;
   color: #5592fb;
   margin-right: 12px;
 }
 
 .user-icon .fa-user-circle {
-  font-size: 24px;
+  font-size: 35px;
   color: #5592fb;
 }
 
