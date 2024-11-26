@@ -1,6 +1,5 @@
 <template>
   <div class="main-content">
-    <!-- 이전 템플릿 코드는 동일 -->
     <div class="header">
       <h1 class="title">위치로 검색하기</h1>
       <p class="subtitle">매물을 확인하고 싶은 위치를 기반으로 검색해보세요!</p>
@@ -44,12 +43,14 @@
     </div>
 
     <div class="content">
-      <div class="sticky-map-container">
+      <div class="map-container">
         <KakaoMap
           :lat="coordinate.lat"
           :lng="coordinate.lng"
           :level="4"
           :draggable="true"
+          :width="'100%'"
+          :height="'100%'"
           class="map-container"
         >
           <KakaoMapMarker
@@ -57,22 +58,39 @@
             :key="property.propertyInfoId"
             :lat="property.latitude"
             :lng="property.longitude"
-            :title="property.aptName"
+            :clickable="true"
+            @onClickKakaoMapMarker="toggleOverlay(property.propertyInfoId)"
+          />
+          <KakaoMapCustomOverlay
+            v-for="property in properties"
+            :key="'overlay-' + property.propertyInfoId"
+            :lat="property.latitude"
+            :lng="property.longitude"
+            :yAnchor="1.4"
+            :visible="isOverlayVisible(property.propertyInfoId)"
+            :content="generateInfoWindow(property)"
           />
         </KakaoMap>
       </div>
 
       <div class="scrollable-list">
-        <!-- 로딩 상태 -->
         <SkeletonLoader v-if="isLoadingProperties" :rows="5" />
-        <!-- 매물 리스트 -->
-        <div v-else>
+        <div v-else-if="properties.length > 0">
           <div
             v-for="property in properties"
             :key="property.propertyInfoId"
             class="property-item"
+            @click="focusOnProperty(property)"
           >
-            <h3 class="property-title">{{ property.aptName }}</h3>
+            <div class="property-header">
+              <h3 class="property-title">{{ property.aptName }}</h3>
+              <button
+                class="add-workspace-button"
+                @click.stop="openWorkspaceModal(property.propertyDealId)"
+              >
+                +
+              </button>
+            </div>
             <div class="property-info-grid">
               <div class="info-group">
                 <span class="info-label">위치</span>
@@ -101,33 +119,44 @@
               </div>
             </div>
           </div>
-
-          <div class="pagination" v-if="pageMeta.pageCount > 1">
-            <button
-              :disabled="currentPage === 1"
-              @click="handlePageChange(currentPage - 1)"
-            >
-              이전
-            </button>
-            <span>{{ currentPage }} / {{ pageMeta.pageCount }}</span>
-            <button
-              :disabled="currentPage === pageMeta.pageCount"
-              @click="handlePageChange(currentPage + 1)"
-            >
-              다음
-            </button>
-          </div>
         </div>
+        <div v-else class="empty-list">매물이 없습니다.</div>
+      </div>
+
+      <div class="pagination" v-if="pageMeta.pageCount > 1">
+        <button
+          :disabled="currentPage === 1"
+          @click="handlePageChange(currentPage - 1)"
+        >
+          이전
+        </button>
+        <span>{{ currentPage }} / {{ pageMeta.pageCount }}</span>
+        <button
+          :disabled="currentPage === pageMeta.pageCount"
+          @click="handlePageChange(currentPage + 1)"
+        >
+          다음
+        </button>
       </div>
     </div>
+    <PropertyWorkspaceModal
+      :is-open="isWorkspaceModalOpen"
+      :property-deal-id="selectedPropertyDealId"
+      @close="closeWorkspaceModal"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
-import { KakaoMap, KakaoMapMarker } from "vue3-kakao-maps";
+import {
+  KakaoMap,
+  KakaoMapMarker,
+  KakaoMapCustomOverlay,
+} from "vue3-kakao-maps";
 import { propertiesApi } from "@/apis/properties";
 import SkeletonLoader from "@/components/SkeletonLoader.vue";
+import PropertyWorkspaceModal from "@/components/WorkspacePropertyModal.vue";
 
 const selectedSido = ref(null);
 const selectedGugun = ref(null);
@@ -137,6 +166,11 @@ const gugunList = ref([]);
 const dongList = ref([]);
 const properties = ref([]);
 const isLoadingProperties = ref(false);
+const coordinate = ref({ lat: 37.5665, lng: 126.978 });
+const overlayStates = ref({});
+
+const isWorkspaceModalOpen = ref(false);
+const selectedPropertyDealId = ref(null);
 
 const pageMeta = ref({
   itemCount: 0,
@@ -145,7 +179,89 @@ const pageMeta = ref({
   hasNextPage: false,
 });
 const currentPage = ref(1);
-const coordinate = ref({ lat: 37.5665, lng: 126.978 });
+
+const isOverlayVisible = (propertyId) => !!overlayStates.value[propertyId];
+
+const toggleOverlay = (propertyId) => {
+  overlayStates.value[propertyId] = !overlayStates.value[propertyId];
+};
+
+const generateInfoWindow = (property) => {
+  return `
+    <div
+      style="
+        padding: 16px;
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        max-width: 320px;
+        color: #333;
+        z-index: 1000;
+      "
+    >
+      <div
+        style="
+          font-size: 16px;
+          font-weight: bold;
+          margin-bottom: 10px;
+          color: #222;
+        "
+      >
+        ${property.aptName}
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 12px; color: #666;">위치</span>
+          <span style="font-size: 12px; color: #333;">
+            ${property.sidoName} ${property.gugunName} ${property.dongName}
+          </span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 14px; color: #666;">거래금액</span>
+          <span style="font-size: 14px; color: #007bff; font-weight: bold;">
+            ${formatDealAmount(property.dealAmount)}
+          </span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 14px; color: #666;">전용면적</span>
+          <span style="font-size: 14px; color: #333;">
+            ${formatAptSize(property.aptSize)}
+          </span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-size: 14px; color: #666;">거래일자</span>
+          <span style="font-size: 14px; color: #333;">
+            ${formatDealDate(property.dealDate)}
+          </span>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+const openWorkspaceModal = (propertyDealId) => {
+  selectedPropertyDealId.value = propertyDealId;
+  isWorkspaceModalOpen.value = true;
+};
+
+const closeWorkspaceModal = () => {
+  isWorkspaceModalOpen.value = false;
+  selectedPropertyDealId.value = null;
+};
+
+const focusOnProperty = (property) => {
+  if (!property.latitude || !property.longitude) {
+    alert("해당 매물의 위치 정보가 없습니다.");
+    return;
+  }
+  coordinate.value = {
+    lat: property.latitude,
+    lng: property.longitude,
+  };
+};
 
 const fetchLocationData = async () => {
   try {
@@ -194,9 +310,7 @@ const fetchProperties = async () => {
     return;
   }
 
-  isLoadingProperties.value = true; // 로딩 시작
-  // AbortController 추가
-  const controller = new AbortController();
+  isLoadingProperties.value = true;
 
   try {
     const response = await propertiesApi.getProperties({
@@ -204,7 +318,6 @@ const fetchProperties = async () => {
       gugun: selectedGugun.value.name,
       dong: selectedDong.value?.name,
       page: currentPage.value - 1,
-      signal: controller.signal, // signal 추가
     });
 
     if (response.data.content) {
@@ -213,25 +326,20 @@ const fetchProperties = async () => {
         latitude: parseFloat(property.latitude),
         longitude: parseFloat(property.longitude),
       }));
-      pageMeta.value = response.data.pageMeta;
-
       if (properties.value.length > 0) {
         coordinate.value.lat = properties.value[0].latitude;
         coordinate.value.lng = properties.value[0].longitude;
       }
+    } else {
+      properties.value = [];
     }
   } catch (error) {
-    if (error.name === "AbortError") {
-      console.log("Request was cancelled");
-      return;
-    }
-    console.error("매물 정보를 가져오는 중 오류 발생:", error);
+    console.error("Error fetching properties:", error);
     alert("매물 정보를 가져오는데 실패했습니다.");
   } finally {
-    isLoadingProperties.value = false; // 로딩 종료
+    isLoadingProperties.value = false;
   }
 };
-
 const formatDealAmount = (amount) => {
   if (!amount) return "가격 정보 없음";
   // 쉼표를 제거하고 숫자로 변환
@@ -260,11 +368,14 @@ onMounted(() => {
 .main-content {
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 40px;
   max-width: 1600px;
   margin: 0 auto;
   gap: 20px;
   min-height: 100vh;
+  flex: 1;
+  background-color: #fff;
+  border-radius: 8px;
 }
 
 .content {
@@ -386,6 +497,43 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
+.property-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.add-workspace-button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background-color: #5592fb;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.info-card {
+  background-color: #ffffff;
+  border-radius: 12px; /* 둥근 모서리 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 부드러운 그림자 */
+  padding: 16px;
+  max-width: 320px; /* 카드 너비 제한 */
+  color: #333; /* 텍스트 색상 */
+  font-family: Arial, sans-serif;
+  font-size: 14px; /* 기본 텍스트 크기 */
+}
+
+.add-workspace-button:hover {
+  background-color: #4477d1;
+}
+
 .property-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -438,5 +586,36 @@ onMounted(() => {
 .pagination span {
   font-size: 14px;
   color: #666;
+}
+
+.map-info-window {
+  position: absolute;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  min-width: 250px;
+  z-index: 1000;
+}
+
+.property-detail {
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #5592fb;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.empty-list {
+  font-size: large;
+  color: #666;
+  text-align: center;
 }
 </style>

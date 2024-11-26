@@ -14,24 +14,32 @@
         v-for="(workspace, index) in workspaces"
         :key="index"
         class="workspace-card"
+        @click="goToWorkspaceProperties(workspace)"
       >
-        <div class="card-header">
-          <button class="meatball-button" @click="toggleMenu(index)">⋮</button>
-          <div v-if="visibleMenuIndex === index" class="dropdown-menu">
-            <div class="menu-item" @click="openEditModal(workspace)">
+        <!-- 미트볼 버튼이 위치할 카드 헤더 -->
+        <div class="card-header" @click.stop>
+          <button class="meatball-button" @click.stop="toggleMenu(index)">
+            ⋮
+          </button>
+          <div
+            v-if="visibleMenuIndex === index"
+            ref="dropdownMenu"
+            class="dropdown-menu"
+          >
+            <div class="menu-item" @click.stop="openEditModal(workspace)">
               ✏️ 수정하기
             </div>
-            <div class="menu-item" @click="deleteWorkspace(workspace.id)">
+            <div class="menu-item" @click.stop="deleteWorkspace(workspace.id)">
               🗑️ 삭제하기
             </div>
           </div>
         </div>
+        <!-- 카드의 중앙 정렬 텍스트 -->
         <div class="card-content">
           <span>{{ workspace.name }}</span>
         </div>
       </div>
-
-      <!-- 추가 버튼 -->
+      <!-- 추가 카드 -->
       <div class="workspace-card add-card" @click="openModal">
         <div class="card-content">
           <span class="add-icon">+</span>
@@ -121,28 +129,31 @@
 </template>
 
 <script>
+import { ref, onMounted, watch } from "vue";
+import { useRouter } from "vue-router";
 import { workspaceApi } from "@/apis/workspace";
 
 export default {
-  data() {
-    return {
-      workspaces: [], // 워크스페이스 데이터
-      isModalOpen: false,
-      isEditModalOpen: false,
-      newWorkspaceName: "",
-      editWorkspaceName: "",
-      editWorkspaceId: null,
-      editWorkspaceMembers: [], // 수정 모달에 표시될 멤버 데이터
-      visibleMenuIndex: null, // 현재 열려 있는 드롭다운 메뉴의 인덱스
-      isInviteModalOpen: false, // 초대 모달 상태
-      inviteEmail: "", // 초대할 이메일
-    };
-  },
-  methods: {
-    async fetchWorkspaces() {
+  setup() {
+    const router = useRouter();
+
+    // State 정의
+    const workspaces = ref([]);
+    const isModalOpen = ref(false);
+    const isEditModalOpen = ref(false);
+    const newWorkspaceName = ref("");
+    const editWorkspaceName = ref("");
+    const editWorkspaceId = ref(null);
+    const editWorkspaceMembers = ref([]);
+    const visibleMenuIndex = ref(null);
+    const isInviteModalOpen = ref(false);
+    const inviteEmail = ref("");
+
+    // 워크스페이스 목록 가져오기
+    const fetchWorkspaces = async () => {
       try {
         const response = await workspaceApi.getUserWorkspaces();
-        this.workspaces = response.data.map((workspace) => ({
+        workspaces.value = response.data.map((workspace) => ({
           id: workspace.workspaceId,
           name: workspace.workspaceName,
         }));
@@ -150,127 +161,214 @@ export default {
         console.error("워크스페이스 가져오기 실패:", error);
         alert("워크스페이스 데이터를 불러오는 데 실패했습니다.");
       }
-    },
-    async fetchWorkspaceMembers(workspaceId) {
+    };
+
+    // 워크스페이스 멤버 가져오기
+    const fetchWorkspaceMembers = async (workspaceId) => {
       try {
         const response = await workspaceApi.getWorkspaceMembers(workspaceId);
-        this.editWorkspaceMembers = response.data.filter(
+        editWorkspaceMembers.value = response.data.filter(
           (member) => member.memberRole !== "OWNER"
-        ); // OWNER 멤버 제외
+        );
       } catch (error) {
         console.error("멤버 가져오기 실패:", error);
         alert("멤버 데이터를 불러오는 데 실패했습니다.");
       }
-    },
-    openEditModal(workspace) {
-      this.editWorkspaceId = workspace.id;
-      this.editWorkspaceName = workspace.name;
-      this.fetchWorkspaceMembers(workspace.id); // 멤버 데이터 요청
-      this.isEditModalOpen = true;
-      this.visibleMenuIndex = null; // 메뉴 닫기
-    },
-    closeEditModal() {
-      this.isEditModalOpen = false;
-      this.editWorkspaceName = "";
-      this.editWorkspaceMembers = [];
-    },
-    removeMember(index) {
-      this.editWorkspaceMembers.splice(index, 1); // 선택된 멤버 삭제
-    },
-    async updateWorkspace() {
-      if (!this.editWorkspaceName.trim()) {
+    };
+
+    // 워크스페이스 상세 페이지로 이동
+    const goToWorkspaceProperties = (workspace) => {
+      router.push({
+        name: "WorkspacePropertiesPage",
+        params: {
+          workspaceId: workspace.id,
+          workspaceName: workspace.name,
+        },
+      });
+    };
+
+    // 수정 모달 열기
+    const openEditModal = (workspace) => {
+      editWorkspaceId.value = workspace.id;
+      editWorkspaceName.value = workspace.name;
+      fetchWorkspaceMembers(workspace.id);
+      isEditModalOpen.value = true;
+      visibleMenuIndex.value = null;
+    };
+
+    // 수정 모달 닫기
+    const closeEditModal = () => {
+      isEditModalOpen.value = false;
+      editWorkspaceName.value = "";
+      editWorkspaceMembers.value = [];
+    };
+
+    // 멤버 삭제
+    const removeMember = (index) => {
+      editWorkspaceMembers.value.splice(index, 1);
+    };
+
+    // 워크스페이스 업데이트
+    const updateWorkspace = async () => {
+      if (!editWorkspaceName.value.trim()) {
         alert("워크스페이스 이름을 입력해주세요.");
         return;
       }
 
-      const memberIdList = this.editWorkspaceMembers.map(
+      const memberIdList = editWorkspaceMembers.value.map(
         (member) => member.memberId
-      ); // 수정 후 남은 멤버 ID 리스트
+      );
 
       try {
-        await workspaceApi.updateWorkspace(this.editWorkspaceId, {
-          workspaceName: this.editWorkspaceName.trim(),
+        await workspaceApi.updateWorkspace(editWorkspaceId.value, {
+          workspaceName: editWorkspaceName.value.trim(),
           memberIdList,
         });
-        await this.fetchWorkspaces(); // 갱신
-        this.closeEditModal();
+        await fetchWorkspaces();
+        closeEditModal();
         alert("워크스페이스가 성공적으로 수정되었습니다.");
       } catch (error) {
         console.error("워크스페이스 수정 실패:", error);
         alert("워크스페이스 수정 중 오류가 발생했습니다.");
       }
-    },
-    toggleMenu(index) {
-      this.visibleMenuIndex = this.visibleMenuIndex === index ? null : index;
-    },
-    async deleteWorkspace(workspaceId) {
+    };
+
+    // 드롭다운 메뉴 토글
+    const toggleMenu = (index) => {
+      visibleMenuIndex.value = visibleMenuIndex.value === index ? null : index;
+    };
+
+    // 드롭다운 메뉴 닫기
+    const closeMenu = () => {
+      visibleMenuIndex.value = null;
+    };
+
+    // 외부 클릭 처리
+    const handleOutsideClick = (event) => {
+      const dropdown = document.querySelector(".dropdown-menu");
+      if (dropdown && !dropdown.contains(event.target)) {
+        closeMenu();
+      }
+    };
+
+    // 워크스페이스 삭제
+    const deleteWorkspace = async (workspaceId) => {
       if (!confirm("정말로 삭제하시겠습니까?")) return;
 
       try {
         await workspaceApi.deleteWorkspace(workspaceId);
-        await this.fetchWorkspaces();
-        this.visibleMenuIndex = null; // 메뉴 닫기
+        await fetchWorkspaces();
+        visibleMenuIndex.value = null;
         alert("워크스페이스가 성공적으로 삭제되었습니다.");
       } catch (error) {
         console.error("워크스페이스 삭제 실패:", error);
         alert("워크스페이스 삭제 중 오류가 발생했습니다.");
       }
-    },
+    };
+
     // 추가 모달 열기
-    openModal() {
-      this.isModalOpen = true;
-    },
+    const openModal = () => {
+      isModalOpen.value = true;
+    };
+
     // 추가 모달 닫기
-    closeModal() {
-      this.isModalOpen = false;
-      this.newWorkspaceName = ""; // 입력 필드 초기화
-    },
+    const closeModal = () => {
+      isModalOpen.value = false;
+      newWorkspaceName.value = "";
+    };
+
     // 워크스페이스 저장
-    async saveWorkspace() {
-      if (!this.newWorkspaceName.trim()) {
+    const saveWorkspace = async () => {
+      if (!newWorkspaceName.value.trim()) {
         alert("워크스페이스 이름을 입력해주세요.");
         return;
       }
 
       try {
-        await workspaceApi.createWorkspace(this.newWorkspaceName.trim());
-        await this.fetchWorkspaces(); // 워크스페이스 목록 갱신
-        this.closeModal(); // 모달 닫기
+        await workspaceApi.createWorkspace(newWorkspaceName.value.trim());
+        await fetchWorkspaces();
+        closeModal();
         alert("워크스페이스가 성공적으로 추가되었습니다.");
       } catch (error) {
         console.error("워크스페이스 추가 실패:", error);
         alert("워크스페이스 추가 중 오류가 발생했습니다.");
       }
-    },
-    openInviteModal() {
-      this.isInviteModalOpen = true;
-      this.closeEditModal();
-    },
-    closeInviteModal() {
-      this.isInviteModalOpen = false;
-      this.inviteEmail = ""; // 입력 필드 초기화
-    },
-    async inviteMember() {
-      if (!this.inviteEmail.trim()) {
+    };
+
+    // 초대 모달 열기
+    const openInviteModal = () => {
+      isInviteModalOpen.value = true;
+      closeEditModal();
+    };
+
+    // 초대 모달 닫기
+    const closeInviteModal = () => {
+      isInviteModalOpen.value = false;
+      inviteEmail.value = "";
+    };
+
+    // 멤버 초대
+    const inviteMember = async () => {
+      if (!inviteEmail.value.trim()) {
         alert("초대할 이메일을 입력해주세요.");
         return;
       }
 
       try {
-        console.log(this.inviteEmail.trim());
-        await workspaceApi.inviteMember(this.editWorkspaceId, {
-          email: this.inviteEmail.trim(),
+        await workspaceApi.inviteMember(editWorkspaceId.value, {
+          email: inviteEmail.value.trim(),
         });
         alert("초대가 성공적으로 완료되었습니다.");
-        this.closeInviteModal(); // 모달 닫기
+        closeInviteModal();
       } catch (error) {
         console.error("초대 실패:", error);
         alert("초대 중 오류가 발생했습니다.");
       }
-    },
-  },
-  async created() {
-    await this.fetchWorkspaces(); // 워크스페이스 데이터 로드
+    };
+
+    // 외부 클릭 이벤트 등록 및 제거
+    onMounted(() => {
+      document.addEventListener("click", handleOutsideClick);
+      fetchWorkspaces();
+    });
+
+    watch(
+      () => visibleMenuIndex.value,
+      () => {
+        if (visibleMenuIndex.value === null) {
+          closeMenu();
+        }
+      }
+    );
+
+    return {
+      workspaces,
+      isModalOpen,
+      isEditModalOpen,
+      newWorkspaceName,
+      editWorkspaceName,
+      editWorkspaceId,
+      editWorkspaceMembers,
+      visibleMenuIndex,
+      isInviteModalOpen,
+      inviteEmail,
+      fetchWorkspaces,
+      fetchWorkspaceMembers,
+      goToWorkspaceProperties,
+      openEditModal,
+      closeEditModal,
+      removeMember,
+      updateWorkspace,
+      toggleMenu,
+      closeMenu,
+      deleteWorkspace,
+      openModal,
+      closeModal,
+      saveWorkspace,
+      openInviteModal,
+      closeInviteModal,
+      inviteMember,
+    };
   },
 };
 </script>
@@ -311,11 +409,13 @@ export default {
   background: #f9f9f9;
   border: 1px solid #e0e0e0;
   border-radius: 10px;
-  height: 120px; /* 고정 높이 */
+  height: 120px;
   display: flex;
-  flex-direction: column; /* 수직으로 내용 정렬 */
-  justify-content: center; /* 내용 가운데 정렬 */
-  align-items: center; /* 내용 가운데 정렬 */
+  flex-direction: column;
+  justify-content: center; /* 콘텐츠를 수직 중앙 정렬 */
+  align-items: center; /* 콘텐츠를 가로 중앙 정렬 */
+  position: relative; /* 미트볼 버튼 위치를 위한 relative */
+  overflow: visible; /* 드롭다운 메뉴가 잘리지 않도록 */
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .workspace-card:hover {
@@ -337,25 +437,26 @@ export default {
 
 /* 카드 내부 헤더 */
 .card-header {
+  position: absolute; /* 카드 내부에서 고정 위치 */
+  top: 10px; /* 카드 상단에서 10px 아래 */
+  right: 10px; /* 카드 오른쪽에서 10px 안쪽 */
   display: flex;
-  justify-content: flex-end;
   align-items: center;
-  width: 100%;
-  position: absolute;
-  top: 8px;
-  right: 8px;
+  z-index: 10; /* 드롭다운 메뉴 우선순위 */
 }
 /* 카드 텍스트 중앙 정렬 */
 .card-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-grow: 1;
+  flex: 1; /* 남은 공간을 모두 차지 */
+  display: flex; /* Flexbox를 사용하여 정렬 */
+  justify-content: center; /* 가로 중앙 정렬 */
+  align-items: center; /* 세로 중앙 정렬 */
+  text-align: center; /* 텍스트 가운데 정렬 */
+  width: 100%; /* 부모 카드 크기에 맞춤 */
   font-size: 16px;
   font-weight: 500;
   color: #333;
-  text-align: center;
-  padding: 0 8px; /* 텍스트가 카드 안에서 중앙에 위치하도록 조정 */
+  padding: 0 10px; /* 텍스트 좌우 여백 */
+  box-sizing: border-box;
 }
 
 /* 미트볼 버튼 */
@@ -365,27 +466,40 @@ export default {
   font-size: 16px;
   cursor: pointer;
   color: #aaa;
+  padding: 5px;
 }
 
 /* 드롭다운 메뉴 */
 .dropdown-menu {
-  position: absolute;
-  top: 40px;
-  right: 8px;
+  top: 100%; /* 버튼 바로 아래 */
+  right: 0; /* 오른쪽 정렬 */
   background: white;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ddd;
   border-radius: 8px;
-  width: 120px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   z-index: 100;
+  display: flex;
+  flex-direction: column; /* 세로로 정렬 */
+  align-items: flex-start; /* 항목을 왼쪽으로 정렬 */
+  padding: 5px 0; /* 드롭다운 안쪽 간격 */
 }
+
+/* 메뉴 아이템 스타일 */
 .menu-item {
-  padding: 10px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #333;
+  padding: 10px 20px; /* 내부 여백 */
+  font-size: 14px; /* 글자 크기 */
+  color: #333; /* 텍스트 색상 */
+  cursor: pointer; /* 클릭 가능한 커서 표시 */
+  text-align: left; /* 텍스트 왼쪽 정렬 */
+  display: flex; /* Flexbox로 아이콘과 텍스트 정렬 */
+  align-items: center; /* 아이콘과 텍스트 수직 정렬 */
+  gap: 8px; /* 아이콘과 텍스트 사이 간격 */
+  white-space: nowrap; /* 텍스트 줄바꿈 방지 */
 }
+
+/* Hover 효과 */
 .menu-item:hover {
-  background: #f5f5f5;
+  background: #f5f5f5; /* Hover 시 배경색 */
 }
 
 /* 추가 버튼 카드 */

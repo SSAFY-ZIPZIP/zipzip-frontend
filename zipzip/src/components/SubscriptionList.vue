@@ -847,7 +847,6 @@ onMounted(() => {
   background: white;
   padding: 40px;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .no-profile-message {
   font-size: 24px;
