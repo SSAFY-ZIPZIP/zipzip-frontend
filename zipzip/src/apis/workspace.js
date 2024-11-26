@@ -34,7 +34,7 @@ export const workspaceApi = {
   // 워크스페이스별 부동산 리스트 조회
   getWorkspaceProperties: (workspaceId) =>
     api.get(`/v1/workspaces/${workspaceId}/properties`, {
-      params: { page: 0, size: 10 },
+      params: { page: 0, size: 1000 },
     }),
 
   // 워크스페이스에 부동산 추가

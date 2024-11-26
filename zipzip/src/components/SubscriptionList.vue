@@ -714,6 +714,13 @@ onMounted(() => {
   gap: 12px;
 }
 
+.empty-message {
+  font-size: large;
+  color: #666;
+  text-align: center;
+  padding: 10px;
+}
+
 .cancel-button,
 .save-button {
   padding: 10px 24px;

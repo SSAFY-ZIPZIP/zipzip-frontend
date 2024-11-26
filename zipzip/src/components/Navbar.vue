@@ -192,7 +192,7 @@ export default {
 .navbar {
   display: flex;
   align-items: center;
-  padding: 20px 20px 0px 20px; /* 위, 오른쪽, 아래, 왼쪽 */
+  padding: 20px 20px 20px 20px; /* 위, 오른쪽, 아래, 왼쪽 */
   background-color: #f9fafb;
   position: relative;
 }

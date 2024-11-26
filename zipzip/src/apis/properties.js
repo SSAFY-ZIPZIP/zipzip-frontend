@@ -6,7 +6,7 @@ export const propertiesApi = {
     const searchParams = new URLSearchParams();
 
     searchParams.append("page", page || 0);
-    searchParams.append("size", 10);
+    searchParams.append("size", 1000);
 
     if (sido) searchParams.append("sido", sido);
     if (gugun) searchParams.append("gugun", gugun);
